@@ -19,6 +19,8 @@ export class ProductListComponent implements OnInit {
   thePageSize: number = 5;
   theTotalElements: number = 0;
 
+  previousKeyword: string = '';
+
   constructor(
     private productService: ProductService,
     private route: ActivatedRoute
@@ -44,9 +46,24 @@ export class ProductListComponent implements OnInit {
     const theKeyWord: string = this.route.snapshot.paramMap.get(
       'keyword'
     ) as string;
-    this.productService.searchProducts(theKeyWord).subscribe((data) => {
-      this.products = data;
-    });
+
+    //if we have a different keyword
+    //then set thePageNumber to 1
+    if (this.previousKeyword != theKeyWord) {
+      this.thePageNumber = 1;
+    }
+
+    this.previousKeyword = theKeyWord;
+
+    console.log(`keyword=${theKeyWord}, thePageNumber=${this.thePageNumber}`);
+
+    this.productService
+      .searchProductsPaginate(
+        this.thePageNumber - 1,
+        this.thePageSize,
+        theKeyWord
+      )
+      .subscribe(this.processResult());
   }
 
   handleListProducts() {
@@ -76,17 +93,21 @@ export class ProductListComponent implements OnInit {
         this.thePageSize,
         this.currentCategoryId
       )
-      .subscribe((data) => {
-        this.products = data._embedded.products;
-        this.thePageNumber = data.page.number + 1;
-        this.thePageSize = data.page.size;
-        this.theTotalElements = data.page.totalElements;
-      });
+      .subscribe(this.processResult());
   }
 
   unpdatePageSize(pageSize: string) {
     this.thePageSize = +pageSize;
     this.thePageNumber = 1;
     this.listProducts();
+  }
+
+  processResult() {
+    return (data: any) => {
+      this.products = data._embedded.products;
+      this.thePageNumber = data.page.number + 1;
+      this.thePageSize = data.page.size;
+      this.theTotalElements = data.page.totalElements;
+    };
   }
 }
